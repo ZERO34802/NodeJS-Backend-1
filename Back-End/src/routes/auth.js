@@ -44,25 +44,29 @@ router.post("/login", validate(loginSchema), async (req, res) => {
 });
 
 // POST /api/auth/forgot-password
-router.post("/forgot-password", async (req, res, next) => {
+router.post("/forgot-password", async (req, res) => {
   try {
-    const { email } = req.body || {};
+    // Some browsers/clients send { email } or raw string; normalize defensively
+    const body = req.body ?? {};
+    const email =
+      typeof body === "string"
+        ? body
+        : typeof body.email === "string"
+        ? body.email.trim()
+        : "";
+
     if (!email) return res.status(400).json({ message: "Email required" });
 
     console.log("FORGOT start", email);
-
-    // Ensure the service promise can’t hang forever
-    await withTimeout(requestPasswordReset(email));
-
+    await requestPasswordReset({ email }); // pass as object with email key
     console.log("FORGOT done", email);
+
     return res
       .status(200)
       .json({ message: "If the email exists, a reset link was sent" });
   } catch (err) {
     console.error("FORGOT error", err);
-    return res
-      .status(err.message === "timeout" ? 504 : 500)
-      .json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 });
 
