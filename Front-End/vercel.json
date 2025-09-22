@@ -1,0 +1,9 @@
+{
+  "routes": [
+    { "src": "^/$", "dest": "/login.html" },
+    { "src": "^/login$", "dest": "/login.html" },
+    { "src": "^/register$", "dest": "/register.html" },
+    { "src": "^/forgot$", "dest": "/forgot.html" },
+    { "src": "^/reset-password$", "dest": "/reset-password.html" }
+  ]
+}
