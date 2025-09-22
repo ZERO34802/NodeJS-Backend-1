@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Register</title>
+  <style>
+    body {
+      font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 40px auto;
+      max-width: 560px;
+      padding: 0 16px
+    }
+
+    input,
+    button {
+      font-size: 1rem;
+      padding: 10px;
+      width: 100%
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 6px
+    }
+
+    button {
+      margin-top: 14px;
+      cursor: pointer
+    }
+
+    .msg {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 6px
+    }
+
+    .error {
+      background: #fde2e1;
+      color: #8a1c13
+    }
+
+    .ok {
+      background: #e6f4ea;
+      color: #0f5132
+    }
+
+    .hidden {
+      display: none
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Create account</h1>
+  <form id="f" novalidate>
+    <label>Email</label><input id="email" type="email" required>
+    <label>Username</label><input id="username" required minlength="3" maxlength="32">
+    <label>Password</label><input id="password" type="password" required minlength="8">
+    <button id="btn" type="submit">Register</button>
+  </form>
+  <div id="msg" class="msg hidden"></div>
+  <script>
+    const API_BASE = "https://api.example.com";
+    const f = document.getElementById("f"), email = document.getElementById("email"), u = document.getElementById("username"), p = document.getElementById("password"), btn = document.getElementById("btn"), msg = document.getElementById("msg");
+    f.addEventListener("submit", async e => { e.preventDefault(); msg.className = "msg hidden"; if (!email.value || !u.value || !p.value || p.value.length < 8) return show("Fill all fields (password 8+ chars)", 1); btn.disabled = 1; btn.textContent = "Working..."; try { const r = await fetch(`${API_BASE}/api/auth/register`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email.value.trim(), username: u.value.trim(), password: p.value }) }); const d = await r.json().catch(() => ({})); if (!r.ok) return show(d.message || "Registration failed", 1); show("Registered successfully. Token issued.", 0) } catch { show("Network error", 1) } finally { btn.disabled = 0; btn.textContent = "Register" } });
+    function show(t, e) { msg.textContent = t; msg.className = `msg ${e ? "error" : "ok"}` }
+  </script>
+</body>
+
+</html>
