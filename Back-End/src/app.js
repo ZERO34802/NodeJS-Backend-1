@@ -17,7 +17,7 @@ app.use(
   })
 );
 
-app.options("*", (req, res) => res.sendStatus(204));
+app.options(/.*/, (req, res) => res.sendStatus(204));
 
 app.use(express.json());
 
