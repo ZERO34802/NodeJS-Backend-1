@@ -15,6 +15,12 @@ const {
 
 const router = express.Router();
 
+const withTimeout = (p, ms = 15000) =>
+  Promise.race([
+    p,
+    new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms)),
+  ]);
+
 // POST /api/auth/register
 router.post("/register", validate(registerSchema), async (req, res) => {
   try {
@@ -38,10 +44,26 @@ router.post("/login", validate(loginSchema), async (req, res) => {
 });
 
 // POST /api/auth/forgot-password
-router.post("/forgot-password", validate(forgotSchema), async (req, res) => {
-  // Intentionally generic message to avoid user enumeration
-  await requestPasswordReset(req.body);
-  res.json({ message: "If that email exists, a reset link has been sent" });
+router.post("/forgot-password", async (req, res, next) => {
+  try {
+    const { email } = req.body || {};
+    if (!email) return res.status(400).json({ message: "Email required" });
+
+    console.log("FORGOT start", email);
+
+    // Ensure the service promise can’t hang forever
+    await withTimeout(requestPasswordReset(email));
+
+    console.log("FORGOT done", email);
+    return res
+      .status(200)
+      .json({ message: "If the email exists, a reset link was sent" });
+  } catch (err) {
+    console.error("FORGOT error", err);
+    return res
+      .status(err.message === "timeout" ? 504 : 500)
+      .json({ message: "Server error" });
+  }
 });
 
 // POST /api/auth/reset-password
