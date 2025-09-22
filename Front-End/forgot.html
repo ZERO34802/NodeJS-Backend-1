@@ -60,7 +60,7 @@
   </form>
   <div id="msg" class="msg hidden"></div>
   <script>
-    const API_BASE = "https://api.example.com";
+    const API_BASE = "https://nodejs-backend-1-vkip.onrender.com";
     const f = document.getElementById("f"), email = document.getElementById("email"), btn = document.getElementById("btn"), msg = document.getElementById("msg");
     f.addEventListener("submit", async e => { e.preventDefault(); msg.className = "msg hidden"; if (!email.value) return show("Enter your email", 1); btn.disabled = 1; btn.textContent = "Working..."; try { const r = await fetch(`${API_BASE}/api/auth/forgot-password`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email.value.trim() }) }); await r.json().catch(() => ({})); show("If the email exists, a reset link has been sent.", 0) } catch { show("Network error", 1) } finally { btn.disabled = 0; btn.textContent = "Send reset link" } });
     function show(t, e) { msg.textContent = t; msg.className = `msg ${e ? "error" : "ok"}` }
