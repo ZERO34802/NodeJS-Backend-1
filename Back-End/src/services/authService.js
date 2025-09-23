@@ -14,8 +14,13 @@ const withTimeout = (p, ms = 15000) =>
     new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms)),
   ]);
 
-async function registerUser({ email, username, password }) {
-  // Ensure email and username are unique in Prisma schema for reliable lookups
+async function registerUser({
+  email,
+  username,
+  password,
+  securityQuestionKey,
+  securityAnswer,
+}) {
   const existing = await prisma.user.findFirst({
     where: { OR: [{ email }, { username }] },
   });
@@ -23,16 +28,23 @@ async function registerUser({ email, username, password }) {
 
   const passwordHash = await hashPassword(password);
 
+  // NEW: hash security answer before persisting
+  const securityAnswerHash = sha256(normalizeAnswer(securityAnswer));
+
   const user = await prisma.user.create({
-    data: { email, username, passwordHash },
+    data: {
+      email,
+      username,
+      passwordHash,
+      securityQuestionKey,
+      securityAnswerHash,
+    },
+    select: { id: true, email: true, username: true },
   });
 
   const token = signJwt({ sub: user.id, username: user.username });
 
-  return {
-    user: { id: user.id, email: user.email, username: user.username },
-    token,
-  };
+  return { user, token };
 }
 
 async function loginUser({ username, password }) {

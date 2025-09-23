@@ -1,3 +1,5 @@
+// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,6 +9,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// NEW: fixed list of questions the UI can present
+enum SecurityQuestion {
+  FIRST_SCHOOL
+  CITY_OF_BIRTH
+  BEST_FRIEND_FIRST_NAME
+  FAVORITE_TEACHER
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -14,6 +24,11 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  // NEW: security question selection and hashed answer (never store plaintext)
+  securityQuestionKey SecurityQuestion
+  securityAnswerHash  String
+
   // relations
   resetTokens  PasswordResetToken[]
 }
