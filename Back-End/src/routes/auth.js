@@ -50,6 +50,14 @@ router.post("/forgot-password/start", async (req, res) => {
 // Body: { usernameOrEmail, answer, newPassword }
 router.post("/forgot-password/verify", async (req, res) => {
   try {
+    const PLACEHOLDER =
+      "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+    if (user.securityAnswerHash === PLACEHOLDER) {
+      return res.status(400).json({
+        message: "Please set your security question in settings first",
+      });
+    }
+
     const { usernameOrEmail, answer, newPassword } = req.body || {};
     if (!usernameOrEmail || !answer || !newPassword) {
       return res.status(400).json({ message: "Missing fields" });
