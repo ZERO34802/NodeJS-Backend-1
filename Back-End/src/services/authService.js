@@ -4,6 +4,7 @@ const { hashPassword, comparePassword } = require("../utils/hash");
 const crypto = require("crypto");
 const { transporter } = require("../lib/mailer");
 const { signJwt } = require("../lib/jwt");
+const { normalizeAnswer, sha256 } = require("../utils/normalize");
 
 const RESET_EXP_MINUTES = 15;
 
