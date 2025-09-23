@@ -2,8 +2,8 @@
 <html lang="en">
 
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Login</title>
   <style>
     body {
@@ -23,7 +23,8 @@
     }
 
     input,
-    button {
+    button,
+    select {
       font-size: 1rem;
       padding: 10px;
       width: 100%
@@ -89,19 +90,151 @@
 
 <body>
   <h1>Login</h1>
-  <form id="loginForm" novalidate> <label>Username</label> <input id="username" required> <label>Password</label> <input
-      id="password" type="password" required> <button id="loginBtn" type="submit">Login</button> </form>
-  <div id="loginMsg" class="msg hidden"></div>
-  <div class="auth-switch" aria-live="polite"> <span>New user?</span> <a href="register.html"
-      aria-label="Go to registration page">Register here</a> </div>
-  <span id="forgotToggle" class="link hidden">Forgot password?</span>
 
+  <form id="loginForm" novalidate>
+    <label>Username</label>
+    <input id="username" required />
+    <label>Password</label>
+    <input id="password" type="password" required />
+    <button id="loginBtn" type="submit">Login</button>
+  </form>
+  <div id="loginMsg" class="msg hidden"></div>
+
+  <div class="auth-switch" aria-live="polite">
+    <span>New user?</span> <a href="register.html" aria-label="Go to registration page">Register here</a>
+  </div>
+
+  <span id="forgotToggle" class="link">Forgot password?</span>
+
+  <!-- NEW: Security-question reset flow -->
   <div id="forgotPanel" class="panel hidden">
-    <h2 style="font-size:1.1rem;margin:0 0 8px">Reset password</h2> <label>Email</label> <input id="fpEmail"
-      type="email" required> <button id="fpBtn" type="button">Send reset link</button>
+    <h2 style="font-size:1.1rem;margin:0 0 8px">Reset password</h2>
+
+    <!-- Step 1: identify -->
+    <label>Username or email</label>
+    <input id="fp-ident" placeholder="Enter username or email" />
+    <button id="fp-next" type="button">Next</button>
+
+    <!-- Step 2: question + new password -->
+    <div id="fp-step2" style="display:none; margin-top:12px;">
+      <label id="fp-question"></label>
+      <input id="fp-answer" placeholder="Answer" />
+      <label>New password</label>
+      <input id="fp-newpass" type="password" minlength="8" placeholder="New password" />
+      <button id="fp-verify" type="button">Reset password</button>
+    </div>
+
     <div id="fpMsg" class="msg hidden"></div>
   </div>
-  <script> const API_BASE = "https://nodejs-backend-1-vkip.onrender.com"; const loginForm = document.getElementById("loginForm"); const usernameEl = document.getElementById("username"); const passwordEl = document.getElementById("password"); const loginBtn = document.getElementById("loginBtn"); const loginMsg = document.getElementById("loginMsg"); const forgotToggle = document.getElementById("forgotToggle"); const forgotPanel = document.getElementById("forgotPanel"); const fpEmail = document.getElementById("fpEmail"); const fpBtn = document.getElementById("fpBtn"); const fpMsg = document.getElementById("fpMsg"); loginForm.addEventListener("submit", async (e) => { e.preventDefault(); hide(loginMsg); hide(fpMsg); forgotToggle.classList.add("hidden"); forgotPanel.classList.add("hidden"); const username = usernameEl.value.trim(); const password = passwordEl.value; if (!username || !password) { show(loginMsg, "Enter username and password", true); return; } loginBtn.disabled = true; loginBtn.textContent = "Working..."; try { const res = await fetch(`${API_BASE}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) }); const data = await res.json().catch(() => ({})); if (!res.ok) { show(loginMsg, data.message || "Invalid credentials", true); forgotToggle.classList.remove("hidden"); return; } localStorage.setItem("token", data.token || ""); show(loginMsg, "Logged in. Token stored.", false); } catch { show(loginMsg, "Network error", true); } finally { loginBtn.disabled = false; loginBtn.textContent = "Login"; } }); forgotToggle.addEventListener("click", () => { forgotPanel.classList.remove("hidden"); if (!fpEmail.value) fpEmail.focus(); }); fpBtn.addEventListener("click", async () => { hide(fpMsg); const email = fpEmail.value.trim(); if (!email) { show(fpMsg, "Enter your email", true); return; } fpBtn.disabled = true; fpBtn.textContent = "Working..."; try { const res = await fetch(`${API_BASE}/api/auth/forgot-password`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) }); await res.json().catch(() => ({})); show(fpMsg, "If the email exists, a reset link has been sent.", false); } catch { show(fpMsg, "Network error", true); } finally { fpBtn.disabled = false; fpBtn.textContent = "Send reset link"; } }); function show(el, text, isErr) { el.textContent = text; el.className = `msg ${isErr ? "error" : "ok"}`; } function hide(el) { el.className = "msg hidden"; el.textContent = ""; } </script>
+
+  <script>
+    const API_BASE = "https://nodejs-backend-1-vkip.onrender.com";
+
+    // Login
+    const loginForm = document.getElementById("loginForm");
+    const usernameEl = document.getElementById("username");
+    const passwordEl = document.getElementById("password");
+    const loginBtn = document.getElementById("loginBtn");
+    const loginMsg = document.getElementById("loginMsg");
+
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hide(loginMsg);
+      const username = usernameEl.value.trim();
+      const password = passwordEl.value;
+      if (!username || !password) return show(loginMsg, "Enter username and password", true);
+
+      loginBtn.disabled = true; loginBtn.textContent = "Working...";
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) return show(loginMsg, data.message || "Invalid credentials", true);
+        localStorage.setItem("token", data.token || "");
+        show(loginMsg, "Logged in. Token stored.", false);
+      } catch {
+        show(loginMsg, "Network error", true);
+      } finally {
+        loginBtn.disabled = false; loginBtn.textContent = "Login";
+      }
+    });
+
+    // Forgot flow
+    const forgotToggle = document.getElementById("forgotToggle");
+    const forgotPanel = document.getElementById("forgotPanel");
+    const fpMsg = document.getElementById("fpMsg");
+    const fpIdentEl = document.getElementById("fp-ident");
+    const fpNext = document.getElementById("fp-next");
+    const fpStep2 = document.getElementById("fp-step2");
+    const fpQuestion = document.getElementById("fp-question");
+    const fpAnswer = document.getElementById("fp-answer");
+    const fpNewPass = document.getElementById("fp-newpass");
+    const fpVerify = document.getElementById("fp-verify");
+    const qMap = {
+      FIRST_SCHOOL: "First school name",
+      CITY_OF_BIRTH: "City of birth",
+      BEST_FRIEND_FIRST_NAME: "Best friend's first name",
+      FAVORITE_TEACHER: "Favorite teacher's name"
+    };
+    let fpIdent = null;
+
+    forgotToggle.addEventListener("click", () => {
+      forgotPanel.classList.remove("hidden");
+      fpIdentEl.focus();
+    });
+
+    fpNext.addEventListener("click", async () => {
+      hide(fpMsg);
+      fpIdent = fpIdentEl.value.trim();
+      if (!fpIdent) return show(fpMsg, "Enter username or email", true);
+
+      fpNext.disabled = true; fpNext.textContent = "Working...";
+      try {
+        const r = await fetch(`${API_BASE}/api/auth/forgot-password/start`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usernameOrEmail: fpIdent })
+        });
+        const d = await r.json().catch(() => ({}));
+        fpQuestion.textContent = d.questionKey ? qMap[d.questionKey] : "Answer your security question";
+        fpStep2.style.display = "block";
+        show(fpMsg, "If details are correct, answer the question to continue.", false);
+      } catch {
+        show(fpMsg, "Network error", true);
+      } finally {
+        fpNext.disabled = false; fpNext.textContent = "Next";
+      }
+    });
+
+    fpVerify.addEventListener("click", async () => {
+      hide(fpMsg);
+      const answer = fpAnswer.value;
+      const newPassword = fpNewPass.value;
+      if (!answer || !newPassword || newPassword.length < 8) {
+        return show(fpMsg, "Provide answer and a new password (8+ chars).", true);
+      }
+      fpVerify.disabled = true; fpVerify.textContent = "Working...";
+      try {
+        const r = await fetch(`${API_BASE}/api/auth/forgot-password/verify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ usernameOrEmail: fpIdent, answer, newPassword })
+        });
+        const d = await r.json().catch(() => ({}));
+        show(fpMsg, d.message || (r.ok ? "Password updated. Log in with the new password." : "Reset failed"), !r.ok);
+      } catch {
+        show(fpMsg, "Network error", true);
+      } finally {
+        fpVerify.disabled = false; fpVerify.textContent = "Reset password";
+      }
+    });
+
+    function show(el, text, isErr) { el.textContent = text; el.className = `msg ${isErr ? "error" : "ok"}`; }
+    function hide(el) { el.className = "msg hidden"; el.textContent = ""; }
+  </script>
 </body>
 
 </html>
