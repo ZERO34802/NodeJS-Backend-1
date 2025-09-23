@@ -53,9 +53,10 @@
 </head>
 
 <body>
+  <p><a href="login.html">Back to login</a></p>
   <h1>Forgot password</h1>
 
-  <!-- Step 1 -->
+  <!-- Step 1 (no form submit, just a button click) -->
   <label>Username or email</label>
   <input id="ident" placeholder="Enter username or email" />
   <button id="nextBtn" type="button">Next</button>
@@ -74,7 +75,9 @@
   <script>
     const API_BASE = "https://nodejs-backend-1-vkip.onrender.com";
     const msg = document.getElementById("msg");
-    const questionMap = {
+    const nextBtn = document.getElementById("nextBtn");
+    const verifyBtn = document.getElementById("verifyBtn");
+    const qMap = {
       FIRST_SCHOOL: "First school name",
       CITY_OF_BIRTH: "City of birth",
       BEST_FRIEND_FIRST_NAME: "Best friend's first name",
@@ -83,11 +86,13 @@
 
     let rememberedIdent = null;
 
-    // Step 1: fetch question
-    async function startReset() {
+    nextBtn.addEventListener("click", async (e) => {
+      e.preventDefault(); // in case nested in a form in future
+      hide();
       rememberedIdent = document.getElementById("ident").value.trim();
       if (!rememberedIdent) return show("Enter username or email", true);
 
+      nextBtn.disabled = true; nextBtn.textContent = "Working...";
       try {
         const r = await fetch(`${API_BASE}/api/auth/forgot-password/start`, {
           method: "POST",
@@ -96,20 +101,26 @@
         });
         const data = await r.json().catch(() => ({}));
         document.getElementById("question").textContent =
-          data.questionKey ? questionMap[data.questionKey] : "Answer your security question";
+          data.questionKey ? qMap[data.questionKey] : "Answer your security question";
         document.getElementById("step2").style.display = "block";
         show("If details are correct, answer the question to continue.", false);
-      } catch { show("Network error", true); }
-    }
+      } catch {
+        show("Network error", true);
+      } finally {
+        nextBtn.disabled = false; nextBtn.textContent = "Next";
+      }
+    });
 
-    // Step 2: verify answer + new password
-    async function verifyReset() {
+    verifyBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      hide();
       const answer = document.getElementById("answer").value;
       const newPassword = document.getElementById("newpass").value;
       if (!answer || !newPassword || newPassword.length < 8) {
         return show("Provide answer and a new password (8+ chars).", true);
       }
 
+      verifyBtn.disabled = true; verifyBtn.textContent = "Working...";
       try {
         const r = await fetch(`${API_BASE}/api/auth/forgot-password/verify`, {
           method: "POST",
@@ -117,17 +128,17 @@
           body: JSON.stringify({ usernameOrEmail: rememberedIdent, answer, newPassword })
         });
         const data = await r.json().catch(() => ({}));
-        show(data.message || (r.ok ? "Password updated. Go back to login." : "Reset failed"), !r.ok);
-        if (r.ok) setTimeout(() => (window.location.href = "login.html"), 1200);
+        show(data.message || (r.ok ? "Password updated. Redirecting to login..." : "Reset failed"), !r.ok);
+        if (r.ok) setTimeout(() => { window.location.href = "login.html"; }, 1200);
       } catch {
         show("Network error", true);
+      } finally {
+        verifyBtn.disabled = false; verifyBtn.textContent = "Reset password";
       }
-    }
+    });
 
-    function show(t, isErr) {
-      msg.textContent = t;
-      msg.className = `msg ${isErr ? "error" : "ok"}`;
-    }
+    function show(t, isErr) { msg.textContent = t; msg.className = `msg ${isErr ? "error" : "ok"}`; }
+    function hide() { msg.textContent = ""; msg.className = "msg hidden"; }
   </script>
 </body>
 
