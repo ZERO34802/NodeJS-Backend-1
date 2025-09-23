@@ -50,6 +50,20 @@ router.post("/forgot-password/start", async (req, res) => {
 // Body: { usernameOrEmail, answer, newPassword }
 router.post("/forgot-password/verify", async (req, res) => {
   try {
+    const { usernameOrEmail, answer, newPassword } = req.body || {};
+    if (!usernameOrEmail || !answer || !newPassword) {
+      return res.status(400).json({ message: "Missing fields" });
+    }
+
+    // Declare user before any reference
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ email: usernameOrEmail }, { username: usernameOrEmail }],
+      },
+    });
+    if (!user) return res.status(400).json({ message: "Invalid answer" });
+
+    // Optional: block placeholder hashes set during backfill
     const PLACEHOLDER =
       "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
     if (user.securityAnswerHash === PLACEHOLDER) {
@@ -58,21 +72,11 @@ router.post("/forgot-password/verify", async (req, res) => {
       });
     }
 
-    const { usernameOrEmail, answer, newPassword } = req.body || {};
-    if (!usernameOrEmail || !answer || !newPassword) {
-      return res.status(400).json({ message: "Missing fields" });
-    }
-
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [{ email: usernameOrEmail }, { username: usernameOrEmail }],
-      },
-    });
-    if (!user) return res.status(400).json({ message: "Invalid answer" });
-
+    const { normalizeAnswer, sha256 } = require("../utils/normalize");
     const ok = sha256(normalizeAnswer(answer)) === user.securityAnswerHash;
     if (!ok) return res.status(400).json({ message: "Invalid answer" });
 
+    const { hashPassword } = require("../utils/hash");
     const newHash = await hashPassword(newPassword);
     await prisma.user.update({
       where: { id: user.id },
